@@ -1,20 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
-
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 
-contract RestrictedHook is IHooks, Ownable {
+contract RestrictedHook is IHooks {
     bool public pause;
+    address public owner;
     event BeforeInitialize(address indexed sender, uint256 sqrtPriceX96);
 
-    constructor(address _admin) Ownable(_admin) {
-        transferOwnership(_admin);
+    constructor(address _admin) {
+        owner = _admin;
         pause = true;
     }
 
-    function setPause(bool flag) external onlyOwner {
+    function changeOwner(address _owner) external {
+        if(owner == address(0) || msg.sender == owner) {
+            owner = _owner;
+        } else {
+            revert ("Owner only");
+        }
+    }
+
+    function setPause(bool flag) external {
+        if(msg.sender != owner) {
+            revert ("Owner only");
+        }
         pause = flag;
     }
 

@@ -40,6 +40,11 @@ contract UniswapV4ForkTest is Test {
         vm.etch(ALL_HOOKS, address(impl).code);
         restrictedHook = RestrictedHook(ALL_HOOKS);
 
+        restrictedHook.changeOwner(owner);
+        restrictedHook.setPause(true);
+        bool pause = restrictedHook.pause();
+        assertEq(pause, true, "Pause should be true");
+
         // 5 Даем контракту разрешение на токены
         usdcMock.approve(address(liquidityHelper), type(uint256).max);
         bidMock.approve(address(liquidityHelper), type(uint256).max);
@@ -51,6 +56,9 @@ contract UniswapV4ForkTest is Test {
 
         // 6️⃣ Получаем баланс владельца перед тестом
         uint256 balanceBefore = usdcMock.balanceOf(owner);
+
+        // Unpaused
+        restrictedHook.setPause(false);
 
         // 7️⃣ Дёргаем контракт на создание пула ликвидности
         (bytes32 poolId, uint256 liquidity) = liquidityHelper.createUniswapPair(
