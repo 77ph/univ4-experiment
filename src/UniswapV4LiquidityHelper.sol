@@ -47,7 +47,8 @@ contract UniswapV4LiquidityHelper is Ownable {
         address _usdc,
         address _bid,
         uint256 _usdcAmount,
-        uint256 _bidAmount
+        uint256 _bidAmount,
+        address Hook
     ) external onlyOwner returns (bytes32 poolIdBytes, uint256 liquidity) {
         // 🔥 Переводим токены на контракт
         IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _usdcAmount);
@@ -62,7 +63,7 @@ contract UniswapV4LiquidityHelper is Ownable {
             currency0: Currency.wrap(token0),
             currency1: Currency.wrap(token1),
             fee: FEE_TIER,
-            hooks: IHooks(address(0)),
+            hooks: IHooks(Hook),
             tickSpacing: 200
         });
 
@@ -97,16 +98,12 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         require(liquidity > 0, "Liquidity must be greater than zero");
 
-        // Approve for Permit2
+        // ✅ 1. Даем Permit2 разрешение на перемещение токенов от нашего контракта
         IERC20(token0).approve(address(permit2), amount0);
         IERC20(token1).approve(address(permit2), amount1);
-
-        // ✅ 1. Даем Permit2 разрешение на перемещение токенов от нашего контракта
         permit2.approve(token0, address(positionManager), uint160(amount0), uint48(block.timestamp + 1 days));
         permit2.approve(token1, address(positionManager), uint160(amount1), uint48(block.timestamp + 1 days));
 
-//        permit2.approve(token0, address(poolManager), uint160(amount0), uint48(block.timestamp + 1 days));
-//        permit2.approve(token1, address(poolManager), uint160(amount1), uint48(block.timestamp + 1 days));
 
         bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
         bytes[] memory params = new bytes[](2);

@@ -4,12 +4,17 @@ pragma solidity =0.8.26;
 import "forge-std/Test.sol";
 import "../src/UniswapV4LiquidityHelper.sol";
 import "../src/mocks/MockERC20.sol";
+import "../src/Hook.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 
 contract UniswapV4ForkTest is Test {
     UniswapV4LiquidityHelper liquidityHelper;
     MockERC20 bidMock; // Мок-токен BID
     MockERC20 usdcMock; // Мок-токен BID
+    RestrictedHook restrictedHook;
+
+    address payable constant ALL_HOOKS = payable(0x0000000000000000000000000000000000003fFF);
 
     address owner = address(this);
     address BNB_POOL_MANAGER = 0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF;
@@ -31,6 +36,10 @@ contract UniswapV4ForkTest is Test {
         // 4 Разворачиваем контракт UniswapV4LiquidityHelper
         liquidityHelper = new UniswapV4LiquidityHelper(owner, BNB_POSITION_MANAGER, BNB_POOL_MANAGER);
 
+        RestrictedHook impl = new RestrictedHook(owner);
+        vm.etch(ALL_HOOKS, address(impl).code);
+        restrictedHook = RestrictedHook(ALL_HOOKS);
+
         // 5 Даем контракту разрешение на токены
         usdcMock.approve(address(liquidityHelper), type(uint256).max);
         bidMock.approve(address(liquidityHelper), type(uint256).max);
@@ -48,7 +57,8 @@ contract UniswapV4ForkTest is Test {
             address(usdcMock), // Используем Mock USDT
             address(bidMock),
             usdcAmount,
-            bidAmount
+            bidAmount,
+            address(restrictedHook)
         );
 
         // 8️⃣ Проверяем, что ликвидность добавлена
@@ -58,5 +68,7 @@ contract UniswapV4ForkTest is Test {
         uint256 balanceAfter = usdcMock.balanceOf(owner);
         assertEq(balanceBefore - balanceAfter, usdcAmount, "Balance should decrease by USDC amount");
     }
+
+
 }
 
