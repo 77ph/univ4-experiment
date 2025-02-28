@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Загружаем переменные
 if [ -f deployed.env ]; then
     export $(grep -v '^#' deployed.env | xargs)
 fi
@@ -9,7 +8,6 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
-# Проверка наличия необходимых переменных
 if [[ -z "$DEPLOYED_CONTRACT" || -z "$SEPOLIA_RPC_URL" || -z "$SCAN_URL" || -z "$ADMIN" || -z "$POSITION_MANAGER" || -z "$POOL_MANAGER" ]]; then
     echo "❌ ERROR: Missing environment variables!"
     exit 1

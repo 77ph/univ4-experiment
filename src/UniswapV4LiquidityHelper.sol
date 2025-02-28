@@ -70,27 +70,22 @@ contract UniswapV4LiquidityHelper is Ownable {
             tickSpacing: 200
         });
 
-        // Получаем PoolId
         PoolId poolId = PoolIdLibrary.toId(key);
         poolIdBytes = PoolId.unwrap(poolId);
 
-        // Проверяем, существует ли пул
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(poolManager, poolId);
         if (sqrtPriceX96 > 0) {
             revert("Pool already exists");
         }
 
-        // Рассчитываем начальную цену
         uint160 initialSqrtPriceX96 = _calculatePrice(amount0, amount1);
 
-        // Инициализируем пул
         poolManager.initialize(key, initialSqrtPriceX96);
         emit PoolCreated(poolIdBytes);
 
         uint160 sqrtRatioAX96 = MIN_SQRT_RATIO;
         uint160 sqrtRatioBX96 = MAX_SQRT_RATIO;
 
-        // Рассчитываем ликвидность
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
             initialSqrtPriceX96,
             sqrtRatioAX96,
@@ -100,8 +95,7 @@ contract UniswapV4LiquidityHelper is Ownable {
         );
 
         require(liquidity > 0, "Liquidity must be greater than zero");
-
-        // ✅ 1. Даем Permit2 разрешение на перемещение токенов от нашего контракта
+        
         IERC20(token0).approve(address(permit2), amount0);
         IERC20(token1).approve(address(permit2), amount1);
         permit2.approve(token0, address(positionManager), uint160(amount0), uint48(block.timestamp + 1 days));

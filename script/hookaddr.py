@@ -3,9 +3,9 @@ import random
 import binascii
 from eth_utils import to_checksum_address
 
-DEPLOYER_ADDRESS = "0xYourDeployerAddress"  # Адрес контракта Create2Deployer
-BYTECODE_HASH = "0x..."  # Keccak-256 от байткода контракта IHooks
-DESIRED_SUFFIX = "2400"  # Последние биты, которые нужно получить
+DEPLOYER_ADDRESS = "0xYourDeployerAddress"  # Create2Deployer
+BYTECODE_HASH = "0x..."  # hash(IHooks.code)
+DESIRED_SUFFIX = "2400"  # Latest bits
 
 def find_salt():
     while True:
