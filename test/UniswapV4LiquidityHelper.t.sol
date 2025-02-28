@@ -56,7 +56,7 @@ contract UniswapV4ForkTest is Test {
         restrictedHook.setPause(false);
 
         (bytes32 poolId, uint256 liquidity) = liquidityHelper.createUniswapPair(
-            address(usdcMock), // Используем Mock USDT
+            address(usdcMock), // Mock USDC
             address(bidMock),
             usdcAmount,
             bidAmount,
