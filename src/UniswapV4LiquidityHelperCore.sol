@@ -113,15 +113,9 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
         uint256 amount0 = uint256(params.liquidityDelta);
         uint256 amount1 = uint256(params.liquidityDelta);
 
-        // ✅ Гарантируем, что баланс токенов урегулирован перед вызовом modifyLiquidity
-        poolManager.settle();
-
         // ✅ Разрешаем PoolManager списывать токены
         IERC20(token0).approve(address(poolManager), amount0);
         IERC20(token1).approve(address(poolManager), amount1);
-
-        // ✅ Повторное settle() перед добавлением ликвидности
-        poolManager.settle();
 
         // ✅ Добавляем ликвидность в пул
         (BalanceDelta callerDelta, BalanceDelta feesAccrued) = poolManager.modifyLiquidity(
@@ -129,6 +123,9 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
             params,
             ""
         );
+
+        // ✅ Повторное после добавления ликвидности
+        poolManager.settle();
 
         return abi.encode(callerDelta, feesAccrued);
     }

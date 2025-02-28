@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract UniswapV4ForkTest is Test {
     UniswapV4LiquidityHelper liquidityHelper;
     MockERC20 bidMock; // Мок-токен BID
-    MockERC20 usdcMock; // Мок-токен BID
+    MockERC20 usdcMock; // Мок-токен USDC
     RestrictedHook restrictedHook;
 
     address payable constant ALL_HOOKS = payable(0x0000000000000000000000000000000000003fFF);
@@ -76,7 +76,5 @@ contract UniswapV4ForkTest is Test {
         uint256 balanceAfter = usdcMock.balanceOf(owner);
         assertEq(balanceBefore - balanceAfter, usdcAmount, "Balance should decrease by USDC amount");
     }
-
-
 }
 
