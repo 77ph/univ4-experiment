@@ -53,7 +53,6 @@ contract UniswapV4LiquidityHelper is Ownable {
         uint256 _bidAmount,
         address Hook
     ) external onlyOwner returns (bytes32 poolIdBytes, uint256 liquidity) {
-        // 🔥 Переводим токены на контракт
         IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _usdcAmount);
         IERC20(_bid).safeTransferFrom(msg.sender, address(this), _bidAmount);
 
