@@ -109,8 +109,8 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         uint256 deadline = block.timestamp + 6000;
 
-        address currency0Addr = Currency.unwrap(key.currency0);
-        uint256 valueToPass = currency0Addr == address(0) ? amount0 : 0;
+        // address currency0Addr = Currency.unwrap(key.currency0);
+        uint256 valueToPass = token0 == address(0) ? amount0 : 0;
 
         positionManager.modifyLiquidities{value: valueToPass}(
             abi.encode(actions, params),
