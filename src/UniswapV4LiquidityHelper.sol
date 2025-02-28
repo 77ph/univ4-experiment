@@ -30,8 +30,11 @@ contract UniswapV4LiquidityHelper is Ownable {
     int24 public constant MIN_TICK = -887200;
     int24 public constant MAX_TICK = -MIN_TICK;
 
-    uint160 public constant MIN_SQRT_RATIO = 4295128739; // Uniswap V3 sqrtRatioAt MIN_TICK
-    uint160 public constant MAX_SQRT_RATIO = 1461446703485210103287273052203988822378723970342; // Uniswap V3 sqrtRatioAt MAX_TICK
+    //uint160 public constant MIN_SQRT_RATIO = 4295128739; // standard Uniswap V3 sqrtRatioAt MIN_TICK
+    //uint160 public constant MAX_SQRT_RATIO = 1461446703485210103287273052203988822378723970342; // standard Uniswap V3 sqrtRatioAt MAX_TICK
+
+    uint160 public constant MIN_SQRT_RATIO = 4310618291; // -887200 Uniswap V3 sqrtRatioAt MIN_TICK
+    uint160 public constant MAX_SQRT_RATIO = 1456195216263841456589366507244248471462712705024; // 887200 Uniswap V3 sqrtRatioAt MAX_TICK
 
     event PoolCreated(bytes32 poolId);
     event LiquidityAdded(bytes32 poolId, uint256 liquidity);
