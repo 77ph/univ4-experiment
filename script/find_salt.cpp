@@ -9,19 +9,7 @@
 #include <atomic>
 
 std::atomic<bool> found(false);  // Глобальная переменная для выхода
-
-// Константы
-const unsigned char DEPLOYER_ADDRESS[20] = {
-    0x48, 0x38, 0xB1, 0x06, 0xFC, 0xE9, 0x64, 0x7B, 0xDF, 0x1E, 
-    0x78, 0x77, 0xBF, 0x73, 0xCE, 0x8B, 0x0B, 0xAD, 0x5F, 0x97
-};
-const unsigned char BYTECODE_HASH[32] = {
-    0xC0, 0x3E, 0xCA, 0x48, 0xFF, 0xA9, 0x96, 0xBD, 0x8D, 0x5E, 
-    0x3B, 0xE4, 0x89, 0x57, 0xEF, 0xDE, 0x5E, 0x1B, 0x3E, 0x6D, 
-    0x1D, 0x11, 0x32, 0x3B, 0xC2, 0xF1, 0x8D, 0xD4, 0x03, 0x74, 
-    0x44, 0x32
-};
-const std::string DESIRED_SUFFIX = "2400"; // Последние биты
+std::string DESIRED_SUFFIX = "2400"; // Последние биты
 
 // Функция преобразования байтов в hex
 std::string toHex(const unsigned char* data, size_t length) {
@@ -31,15 +19,26 @@ std::string toHex(const unsigned char* data, size_t length) {
     return oss.str();
 }
 
+// Функция конвертации строки hex в массив байтов
+std::vector<unsigned char> hexToBytes(const std::string& hex) {
+    std::vector<unsigned char> bytes;
+    for (size_t i = 0; i < hex.length(); i += 2) {
+        std::string byteString = hex.substr(i, 2);
+        unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
+        bytes.push_back(byte);
+    }
+    return bytes;
+}
+
 // Генерация Ethereum-адреса с использованием Keccak256 (SHA3-256)
-std::string generateAddress(const std::vector<unsigned char>& salt) {
+std::string generateAddress(const std::vector<unsigned char>& deployerAddress, const std::vector<unsigned char>& bytecodeHash, const std::vector<unsigned char>& salt) {
     std::vector<unsigned char> preimage(1 + 20 + 32 + 32);
     preimage[0] = 0xff;
 
     // Заполняем preimage
-    std::memcpy(preimage.data() + 1, DEPLOYER_ADDRESS, 20);
+    std::memcpy(preimage.data() + 1, deployerAddress.data(), 20);
     std::memcpy(preimage.data() + 21, salt.data(), 32);
-    std::memcpy(preimage.data() + 53, BYTECODE_HASH, 32);
+    std::memcpy(preimage.data() + 53, bytecodeHash.data(), 32);
 
     unsigned char hash[32];  // SHA3-256 всегда 32 байта
     unsigned int hash_len = 0;
@@ -56,7 +55,7 @@ std::string generateAddress(const std::vector<unsigned char>& salt) {
 }
 
 // Поиск соли
-void findSalt() {
+void findSalt(const std::vector<unsigned char>& deployerAddress, const std::vector<unsigned char>& bytecodeHash) {
     std::vector<unsigned char> salt(32);
     std::random_device rd;
 
@@ -70,7 +69,7 @@ void findSalt() {
             for (int i = 0; i < 32; ++i) 
                 localSalt[i] = static_cast<unsigned char>(dist(gen));
 
-            std::string address = generateAddress(localSalt);
+            std::string address = generateAddress(deployerAddress, bytecodeHash, localSalt);
 
             if (address.substr(address.length() - DESIRED_SUFFIX.length()) == DESIRED_SUFFIX) {
                 #pragma omp critical
@@ -85,8 +84,29 @@ void findSalt() {
     }
 }
 
-int main() {
-    findSalt();
+int main(int argc, char* argv[]) {
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <DEPLOYER_ADDRESS> <BYTECODE_HASH> [DESIRED_SUFFIX]" << std::endl;
+        return 1;
+    }
+
+    std::string deployerAddressHex = argv[1];
+    std::string bytecodeHashHex = argv[2];
+
+    if (argc > 3) {
+        DESIRED_SUFFIX = argv[3];  // Позволяет задавать нужный суффикс через аргументы
+    }
+
+    // Проверяем корректность ввода
+    if (deployerAddressHex.length() != 40 || bytecodeHashHex.length() != 64) {
+        std::cerr << "Error: DEPLOYER_ADDRESS must be 40 hex chars and BYTECODE_HASH must be 64 hex chars." << std::endl;
+        return 1;
+    }
+
+    std::vector<unsigned char> deployerAddress = hexToBytes(deployerAddressHex);
+    std::vector<unsigned char> bytecodeHash = hexToBytes(bytecodeHashHex);
+
+    findSalt(deployerAddress, bytecodeHash);
     return 0;
 }
 

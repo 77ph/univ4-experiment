@@ -88,15 +88,17 @@ sudo apt update
 sudo apt install libssl-dev
 g++ -o find_salt find_salt.cpp -O2 -fopenmp -lssl -lcrypto
 
-./find_salt 
-Found salt: 953415c933802d62ee0d6d31d2a5cfe7b584376bc6183a1e80f2be8a4d14f185
-Generated address: 7e7f71aee420c4c89f8e77b4a52fd24bf8042400
+./find_salt 4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97 c03eca48ffa996bd8d5e3be48957efde5e1b3e6d1d11323bc2f18dd403744432
+or
+./find_salt 4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97 c03eca48ffa996bd8d5e3be48957efde5e1b3e6d1d11323bc2f18dd403744432 2400
+Found salt: 611b580e675bacaa4ad87a3a8ec25c59e16546ee4c42aad1c3fe783dee7c1de6
+Generated address: 20254e1759c04396833dbfe34beeba869ab62400
 
 Verify:
 nano check_find_salt.py
 edit
-SALT = "953415c933802d62ee0d6d31d2a5cfe7b584376bc6183a1e80f2be8a4d14f185"
+SALT = "611b580e675bacaa4ad87a3a8ec25c59e16546ee4c42aad1c3fe783dee7c1de6"
 python3 check_find_salt.py
-Computed Address: 0x7e7f71aee420c4c89f8e77b4a52fd24bf8042400
-0x7e7f71aee420c4c89f8e77b4a52fd24bf8042400 == 7e7f71aee420c4c89f8e77b4a52fd24bf8042400
+Computed Address: 0x20254e1759c04396833dbfe34beeba869ab62400
+0x20254e1759c04396833dbfe34beeba869ab62400 == 20254e1759c04396833dbfe34beeba869ab62400
 ```
