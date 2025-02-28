@@ -54,28 +54,22 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
             tickSpacing: 200
         });
 
-        // Получаем PoolId
         PoolId poolId = PoolIdLibrary.toId(key);
         poolIdBytes = PoolId.unwrap(poolId);
 
-        // Проверяем, существует ли пул
         (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
         if (sqrtPriceX96 > 0) {
             revert("Pool already exists");
         }
 
-        // Рассчитываем начальную цену
         uint160 initialSqrtPriceX96 = _calculatePrice(amount0, amount1);
 
-        // Инициализируем пул
         int24 initialTick = poolManager.initialize(key, initialSqrtPriceX96);
         emit PoolCreated(poolIdBytes);
 
-        // Разрешаем PoolManager тратить токены
         IERC20(token0).approve(address(poolManager), amount0);
         IERC20(token1).approve(address(poolManager), amount1);
 
-        // Подготовка параметров для добавления ликвидности
         IPoolManager.ModifyLiquidityParams memory params = IPoolManager.ModifyLiquidityParams({
             tickLower: MIN_TICK,
             tickUpper: MAX_TICK,
@@ -83,16 +77,12 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
             salt: 0
         });
 
-        // Подготовка данных для разблокировки
         bytes memory unlockData = abi.encode(key, params);
 
-        // Вызов функции unlock
         bytes memory result = poolManager.unlock(unlockData);
 
-        // Декодируем результат
         (BalanceDelta callerDelta,) = abi.decode(result, (BalanceDelta, BalanceDelta));
 
-        // Определяем добавленную ликвидность
         liquidity = uint256(int256(callerDelta.amount0()) + int256(callerDelta.amount1()));
 
         emit LiquidityAdded(poolIdBytes, liquidity);
@@ -101,7 +91,6 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
     function unlockCallback(bytes calldata data) external override returns (bytes memory) {
         require(msg.sender == address(poolManager), "Unauthorized");
 
-        // Декодируем данные
         (PoolKey memory key, IPoolManager.ModifyLiquidityParams memory params) = abi.decode(
             data,
             (PoolKey, IPoolManager.ModifyLiquidityParams)
@@ -113,20 +102,16 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
         uint256 amount0 = uint256(params.liquidityDelta);
         uint256 amount1 = uint256(params.liquidityDelta);
 
-        // ✅ Разрешаем PoolManager списывать токены
         IERC20(token0).approve(address(poolManager), amount0);
         IERC20(token1).approve(address(poolManager), amount1);
 
-        // ✅ Добавляем ликвидность в пул
         (BalanceDelta callerDelta, BalanceDelta feesAccrued) = poolManager.modifyLiquidity(
             key,
             params,
             ""
         );
 
-        // ✅ Повторное после добавления ликвидности
         poolManager.settle();
-
         return abi.encode(callerDelta, feesAccrued);
     }
 
