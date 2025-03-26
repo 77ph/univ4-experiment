@@ -201,16 +201,6 @@ contract UniswapV4LiquidityHelper is Ownable {
         sqrtPriceX96 = uint160(FixedPointMathLib.sqrt(ratioX192));
     }
 
-    function _sqrt(uint256 x) private pure returns (uint256 result) {
-        if (x == 0) return 0;
-        uint256 z = (x + 1) / 2;
-        result = x;
-        while (z < result) {
-            result = z;
-            z = (x / z + z) / 2;
-        }
-    }
-
     function getMinAmountOut(
         uint256 amountIn,
         uint160 sqrtPriceX96,
