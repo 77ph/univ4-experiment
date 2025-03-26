@@ -39,7 +39,8 @@ contract UniswapV4LiquidityHelper is Ownable {
     uint160 public constant MIN_SQRT_RATIO = 4310618291; // -887200 Uniswap V3 sqrtRatioAt MIN_TICK
     uint160 public constant MAX_SQRT_RATIO = 1456195216263841456589366507244248471462712705024; // 887200 Uniswap V3 sqrtRatioAt MAX_TICK
 
-    bytes1 constant V4_SWAP_EXACT_IN = 0x0b;
+    // https://github.com/Uniswap/universal-router/blob/main/contracts/libraries/Commands.sol
+    bytes1 constant V4_SWAP = 0x10;
 
     event PoolCreated(bytes32 poolId);
     event LiquidityAdded(bytes32 poolId, uint256 liquidity);
@@ -59,8 +60,8 @@ contract UniswapV4LiquidityHelper is Ownable {
     {
         IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _usdcAmount); // for addLiqidity
         IERC20(_bid).safeTransferFrom(msg.sender, address(this), _bidAmount); // for addLiqidity
-        IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _usdcAmount / 100); // for swap
-        IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _bidAmount / 100); // for swap
+        IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _usdcAmount); // for swap
+        IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _bidAmount); // for swap
 
         bool isUSDCFirst = _usdc < _bid;
         (address token0, address token1, uint256 amount0, uint256 amount1) =
@@ -70,7 +71,8 @@ contract UniswapV4LiquidityHelper is Ownable {
             currency0: Currency.wrap(token0),
             currency1: Currency.wrap(token1),
             fee: FEE_TIER,
-            hooks: IHooks(Hook),
+            //hooks: IHooks(Hook),
+            hooks: IHooks(address(0)),
             tickSpacing: 200
         });
 
@@ -114,6 +116,11 @@ contract UniswapV4LiquidityHelper is Ownable {
         positionManager.modifyLiquidities{value: valueToPass}(abi.encode(actions, params), deadline);
 
         emit LiquidityAdded(poolIdBytes, liquidity);
+
+        IERC20(token0).approve(address(permit2), amount0);
+        IERC20(token1).approve(address(permit2), amount1);
+        permit2.approve(token0, address(router), uint160(amount0), uint48(block.timestamp + 1 days));
+        permit2.approve(token1, address(router), uint160(amount1), uint48(block.timestamp + 1 days));
         swapExactInputSingle(key, uint128(amount0 / 100), 50);
     }
 
@@ -126,7 +133,7 @@ contract UniswapV4LiquidityHelper is Ownable {
         uint128 minOut = getMinAmountOut(amountIn, sqrtPriceX96, slippage); // slippage=50 -> 0.5% slippage
 
         // Encode the Universal Router command
-        bytes memory commands = abi.encodePacked(uint8(V4_SWAP_EXACT_IN));
+        bytes memory commands = abi.encodePacked(uint8(V4_SWAP));
         bytes[] memory inputs = new bytes[](1);
 
         // Encode V4Router actions
