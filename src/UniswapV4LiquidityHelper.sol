@@ -125,7 +125,7 @@ contract UniswapV4LiquidityHelper is Ownable {
         console.log("before createUniswapPair :: amount0", IERC20(token0).balanceOf(address(this)));
         console.log("before createUniswapPair :: amount1", IERC20(token1).balanceOf(address(this)));
 
-        uint256 amoutOut = swapExactInputSingle(key, uint128(amount0 / 100), 10_000);
+        uint256 amoutOut = swapExactInputSingle(key, uint128(amount0 / 100), 200);
 
         console.log("after createUniswapPair :: amount0", IERC20(token0).balanceOf(address(this)));
         console.log("after createUniswapPair :: amount1", IERC20(token1).balanceOf(address(this)));
