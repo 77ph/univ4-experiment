@@ -19,6 +19,7 @@ import {IV4Router} from "v4-periphery/src/interfaces/IV4Router.sol";
 
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {SwapMath} from "@uniswap/v4-core/src/libraries/SwapMath.sol";
+import {FixedPointMathLib} from "solmate/src/utils/FixedPointMathLib.sol";
 
 import "forge-std/console.sol";
 
@@ -197,7 +198,7 @@ contract UniswapV4LiquidityHelper is Ownable {
         // ratioX192 = amount1 / amount0, масштабированный в Q192
         uint256 ratioX192 = FullMath.mulDiv(amount1, 1 << 192, amount0);
 
-        sqrtPriceX96 = uint160(_sqrt(ratioX192));
+        sqrtPriceX96 = uint160(FixedPointMathLib.sqrt(ratioX192));
     }
 
     function _sqrt(uint256 x) private pure returns (uint256 result) {
