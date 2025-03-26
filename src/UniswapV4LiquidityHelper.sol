@@ -185,8 +185,22 @@ contract UniswapV4LiquidityHelper is Ownable {
     }
 
     function _calculatePrice(uint256 _amount0, uint256 _amount1) private pure returns (uint160 sqrtPriceX96) {
-        uint256 price = (_amount1 << 96) / _amount0;
-        sqrtPriceX96 = uint160(price);
+        require(_amount0 > 0 && _amount1 > 0, "Amounts must be > 0");
+
+        // price = amount1 / amount0 in Q96
+        uint256 ratioX96 = (_amount1 << 96) / _amount0;
+
+        sqrtPriceX96 = uint160(_sqrt(ratioX96) << 48); // √(Q96) => Q96 = √ratio << 48
+    }
+
+    function _sqrt(uint256 x) private pure returns (uint256 result) {
+        if (x == 0) return 0;
+        uint256 z = (x + 1) / 2;
+        result = x;
+        while (z < result) {
+            result = z;
+            z = (x / z + z) / 2;
+        }
     }
 
     function getMinAmountOut(
