@@ -34,6 +34,7 @@ contract UniswapV4LiquidityHelper is Ownable {
     MyV4OnlyUniversalRouter public immutable router;
 
     uint24 public constant FEE_TIER = 10_000;
+    uint24 public constant feeDenominator = 1_000_000;
     int24 public constant MIN_TICK = -887200;
     int24 public constant MAX_TICK = -MIN_TICK;
 
@@ -127,20 +128,20 @@ contract UniswapV4LiquidityHelper is Ownable {
         console.log("before createUniswapPair :: amount0", IERC20(token0).balanceOf(address(this)));
         console.log("before createUniswapPair :: amount1", IERC20(token1).balanceOf(address(this)));
 
-        uint256 amoutOut = swapExactInputSingle(key, uint128(amount0 / 100), 200);
+        uint256 amoutOut = swapExactInputSingle(key, uint128(amount0 / 100), 200, FEE_TIER);
 
         console.log("after createUniswapPair :: amount0", IERC20(token0).balanceOf(address(this)));
         console.log("after createUniswapPair :: amount1", IERC20(token1).balanceOf(address(this)));
         emit Swap(poolIdBytes, amount0 / 100, amoutOut);
     }
 
-    function swapExactInputSingle(PoolKey memory key, uint128 amountIn, uint256 slippage)
+    function swapExactInputSingle(PoolKey memory key, uint128 amountIn, uint256 slippage, uint24 fee_tier)
         public
         returns (uint256 amountOut)
     {
         PoolId poolId = PoolIdLibrary.toId(key);
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(poolManager, poolId);
-        uint128 minOut = getMinAmountOut(amountIn, sqrtPriceX96, slippage); // slippage=50 -> 0.5% slippage
+        uint128 minOut = getMinAmountOut(amountIn, sqrtPriceX96, slippage, fee_tier); // slippage=50 -> 0.5% slippage
 
         // Encode the Universal Router command
         bytes memory commands = abi.encodePacked(uint8(V4_SWAP));
@@ -208,13 +209,18 @@ contract UniswapV4LiquidityHelper is Ownable {
     function getMinAmountOut(
         uint256 amountIn,
         uint160 sqrtPriceX96,
-        uint256 slippageBps // например, 50 = 0.5%
+        uint256 slippageBps, // например, 50 = 0.5%
+        uint24 feeBps
     ) public pure returns (uint128 minAmountOut) {
-        // Определяем цену
         uint256 priceX96 = uint256(sqrtPriceX96) * uint256(sqrtPriceX96) >> 96;
 
-        // Расчёт приблизительного выхода
-        uint256 estimatedOut = (amountIn * priceX96) >> 96;
+        // 1% fee taken from input, not output!
+        uint256 amountAfterFee = FullMath.mulDiv(amountIn, feeDenominator - feeBps, feeDenominator);
+
+        // estimated output after fee
+        uint256 estimatedOut = FullMath.mulDiv(amountAfterFee, priceX96, 1 << 96);
+
+        console.log("estimatedOut after input fee", estimatedOut);
 
         // Учёт проскальзывания
         uint256 slippage = (estimatedOut * slippageBps) / 10_000;
