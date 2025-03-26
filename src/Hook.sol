@@ -115,14 +115,12 @@ contract RestrictedHook is IHooks {
         console.log("delta.amount0", int256(delta.amount0()));
         console.log("delta.amount1", int256(delta.amount1()));
 
-        if (params.amountSpecified < 0) {
-            // user swaps token0 → receives token1
+        if (params.zeroForOne) {
             tokenOut = Currency.unwrap(key.currency1);
-            amountOut = uint256(uint128(-delta.amount1()));
+            amountOut = uint256(int256(delta.amount1()));
         } else {
-            // user swaps token1 → receives token0
             tokenOut = Currency.unwrap(key.currency0);
-            amountOut = uint256(uint128(-delta.amount0()));
+            amountOut = uint256(int256(delta.amount0()));
         }
 
         uint256 feeBps = 50;
