@@ -45,6 +45,7 @@ contract UniswapV4LiquidityHelper is Ownable {
     event PoolCreated(bytes32 poolId);
     event LiquidityAdded(bytes32 poolId, uint256 liquidity);
     event Withdrawal(IERC20 indexed token, uint256 amount);
+    event Swap(bytes32 poolId, uint256 amountIn, uint256 amountOut);
 
     constructor(address _admin, address _positionManager, address _poolManager, address _router) Ownable(_admin) {
         transferOwnership(_admin);
@@ -60,8 +61,6 @@ contract UniswapV4LiquidityHelper is Ownable {
     {
         IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _usdcAmount); // for addLiqidity
         IERC20(_bid).safeTransferFrom(msg.sender, address(this), _bidAmount); // for addLiqidity
-        IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _usdcAmount); // for swap
-        IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _bidAmount); // for swap
 
         bool isUSDCFirst = _usdc < _bid;
         (address token0, address token1, uint256 amount0, uint256 amount1) =
@@ -117,11 +116,13 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         emit LiquidityAdded(poolIdBytes, liquidity);
 
-        IERC20(token0).approve(address(permit2), amount0);
-        IERC20(token1).approve(address(permit2), amount1);
-        permit2.approve(token0, address(router), uint160(amount0), uint48(block.timestamp + 1 days));
-        permit2.approve(token1, address(router), uint160(amount1), uint48(block.timestamp + 1 days));
-        swapExactInputSingle(key, uint128(amount0 / 100), 50);
+
+        // swap inside helper
+        IERC20(token0).safeTransferFrom(msg.sender, address(this), amount0 / 100); // for swap
+        IERC20(token0).approve(address(permit2), amount0 / 100);
+        permit2.approve(token0, address(router), uint160(amount0 / 100), uint48(block.timestamp + 1 days));
+        uint256 amoutOut = swapExactInputSingle(key, uint128(amount0 / 100), 50);
+        emit Swap(poolIdBytes, amount0 / 100, amoutOut);
     }
 
     function swapExactInputSingle(PoolKey memory key, uint128 amountIn, uint256 slippage)

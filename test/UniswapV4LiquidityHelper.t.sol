@@ -25,7 +25,7 @@ contract UniswapV4ForkTest is Test {
         vm.createSelectFork(BNB_RPC);
 
         usdcMock = new MockERC20("Mock USDT", "mUSDT", 6);
-        usdcMock.mint(owner, 1_000_000 * 10 ** 18);
+        usdcMock.mint(owner, 1_000_000 * 10 ** 6);
 
         bidMock = new MockERC20("Mock BID", "mBID", 18);
         bidMock.mint(owner, 1_000_000 * 10 ** 18);
