@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
+
 import "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 
 contract RestrictedHook is IHooks {
     bool public pause;
     address public owner;
+
     event BeforeInitialize(address indexed sender, uint256 sqrtPriceX96);
 
     constructor(address _admin) {
@@ -14,35 +16,29 @@ contract RestrictedHook is IHooks {
     }
 
     function changeOwner(address _owner) external {
-        if(owner == address(0) || msg.sender == owner) {
+        if (owner == address(0) || msg.sender == owner) {
             owner = _owner;
         } else {
-            revert ("Owner only");
+            revert("Owner only");
         }
     }
 
     function setPause(bool flag) external {
-        if(msg.sender != owner) {
-            revert ("Owner only");
+        if (msg.sender != owner) {
+            revert("Owner only");
         }
         pause = flag;
     }
 
-    function beforeInitialize(
-        address sender,
-        PoolKey calldata key,
-        uint160 sqrtPriceX96
-    ) external returns (bytes4) {
+    function beforeInitialize(address sender, PoolKey calldata key, uint160 sqrtPriceX96) external returns (bytes4) {
         emit BeforeInitialize(sender, sqrtPriceX96);
         return RestrictedHook.beforeInitialize.selector;
     }
 
-    function afterInitialize(
-        address sender,
-        PoolKey calldata key,
-        uint160 sqrtPriceX96,
-        int24 tick
-    ) external returns (bytes4) {
+    function afterInitialize(address sender, PoolKey calldata key, uint160 sqrtPriceX96, int24 tick)
+        external
+        returns (bytes4)
+    {
         return RestrictedHook.afterInitialize.selector;
     }
 
@@ -52,8 +48,8 @@ contract RestrictedHook is IHooks {
         IPoolManager.ModifyLiquidityParams calldata params,
         bytes calldata hookData
     ) external returns (bytes4) {
-        if(pause) {
-            revert ("Paused");
+        if (pause) {
+            revert("Paused");
         }
         return RestrictedHook.beforeAddLiquidity.selector;
     }
@@ -128,4 +124,3 @@ contract RestrictedHook is IHooks {
         return RestrictedHook.afterDonate.selector;
     }
 }
-

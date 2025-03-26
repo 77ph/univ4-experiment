@@ -32,19 +32,17 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
         poolManager = IPoolManager(_poolManager);
     }
 
-    function createUniswapPair(
-        address _usdc,
-        address _bid,
-        uint256 _usdcAmount,
-        uint256 _bidAmount
-    ) external onlyOwner returns (bytes32 poolIdBytes, uint256 liquidity) {
+    function createUniswapPair(address _usdc, address _bid, uint256 _usdcAmount, uint256 _bidAmount)
+        external
+        onlyOwner
+        returns (bytes32 poolIdBytes, uint256 liquidity)
+    {
         IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _usdcAmount);
         IERC20(_bid).safeTransferFrom(msg.sender, address(this), _bidAmount);
 
         bool isUSDCFirst = _usdc < _bid;
-        (address token0, address token1, uint256 amount0, uint256 amount1) = isUSDCFirst
-            ? (_usdc, _bid, _usdcAmount, _bidAmount)
-            : (_bid, _usdc, _bidAmount, _usdcAmount);
+        (address token0, address token1, uint256 amount0, uint256 amount1) =
+            isUSDCFirst ? (_usdc, _bid, _usdcAmount, _bidAmount) : (_bid, _usdc, _bidAmount, _usdcAmount);
 
         PoolKey memory key = PoolKey({
             currency0: Currency.wrap(token0),
@@ -91,10 +89,8 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
     function unlockCallback(bytes calldata data) external override returns (bytes memory) {
         require(msg.sender == address(poolManager), "Unauthorized");
 
-        (PoolKey memory key, IPoolManager.ModifyLiquidityParams memory params) = abi.decode(
-            data,
-            (PoolKey, IPoolManager.ModifyLiquidityParams)
-        );
+        (PoolKey memory key, IPoolManager.ModifyLiquidityParams memory params) =
+            abi.decode(data, (PoolKey, IPoolManager.ModifyLiquidityParams));
 
         address token0 = Currency.unwrap(key.currency0);
         address token1 = Currency.unwrap(key.currency1);
@@ -105,11 +101,7 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
         IERC20(token0).approve(address(poolManager), amount0);
         IERC20(token1).approve(address(poolManager), amount1);
 
-        (BalanceDelta callerDelta, BalanceDelta feesAccrued) = poolManager.modifyLiquidity(
-            key,
-            params,
-            ""
-        );
+        (BalanceDelta callerDelta, BalanceDelta feesAccrued) = poolManager.modifyLiquidity(key, params, "");
 
         poolManager.settle();
         return abi.encode(callerDelta, feesAccrued);
@@ -123,14 +115,8 @@ contract UniswapV4LiquidityHelperCore is Ownable, IUnlockCallback {
         emit Withdrawal(_token, _amount);
     }
 
-    function _calculatePrice(
-    uint256 _amount0,
-    uint256 _amount1
-    ) private pure returns (uint160 sqrtPriceX96) {
+    function _calculatePrice(uint256 _amount0, uint256 _amount1) private pure returns (uint160 sqrtPriceX96) {
         uint256 price = (_amount1 << 96) / _amount0;
         sqrtPriceX96 = uint160(price);
     }
 }
-
-
-

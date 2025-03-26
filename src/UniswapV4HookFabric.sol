@@ -16,12 +16,8 @@ contract Create2Deployer {
     }
 
     function computeAddress(bytes32 salt, bytes memory bytecode) external view returns (address) {
-        return address(uint160(uint(keccak256(abi.encodePacked(
-            bytes1(0xff),
-            address(this),
-            salt,
-            keccak256(bytecode)
-        )))));
+        return address(
+            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)))))
+        );
     }
 }
-

@@ -7,11 +7,10 @@ import "../src/mocks/MockERC20.sol";
 import "../src/Hook.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-
 contract UniswapV4ForkTest is Test {
     UniswapV4LiquidityHelper liquidityHelper;
-    MockERC20 bidMock; 
-    MockERC20 usdcMock; 
+    MockERC20 bidMock;
+    MockERC20 usdcMock;
     RestrictedHook restrictedHook;
 
     address payable constant ALL_HOOKS = payable(0x0000000000000000000000000000000000003fFF);
@@ -19,19 +18,19 @@ contract UniswapV4ForkTest is Test {
     address owner = address(this);
     address BNB_POOL_MANAGER = 0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF;
     address BNB_POSITION_MANAGER = 0x7A4a5c919aE2541AeD11041A1AEeE68f1287f95b;
+    address BNB_ROUTER = 0x1906c1d672b88cD1B9aC7593301cA990F94Eae07;
 
     function setUp() public {
-
         string memory BNB_RPC = "https://bsc-dataseed.binance.org/";
         vm.createSelectFork(BNB_RPC);
 
-        usdcMock = new MockERC20("Mock USDT", "mUSDT", 18);
-        usdcMock.mint(owner, 1_000_000 * 10**18);
+        usdcMock = new MockERC20("Mock USDT", "mUSDT", 6);
+        usdcMock.mint(owner, 1_000_000 * 10 ** 18);
 
         bidMock = new MockERC20("Mock BID", "mBID", 18);
-        bidMock.mint(owner, 1_000_000 * 10**18);
+        bidMock.mint(owner, 1_000_000 * 10 ** 18);
 
-        liquidityHelper = new UniswapV4LiquidityHelper(owner, BNB_POSITION_MANAGER, BNB_POOL_MANAGER);
+        liquidityHelper = new UniswapV4LiquidityHelper(owner, BNB_POSITION_MANAGER, BNB_POOL_MANAGER, BNB_ROUTER);
 
         RestrictedHook impl = new RestrictedHook(owner);
         vm.etch(ALL_HOOKS, address(impl).code);
@@ -47,7 +46,7 @@ contract UniswapV4ForkTest is Test {
     }
 
     function testCreateUniswapPair() public {
-        uint256 usdcAmount = 1000 * 1e18;
+        uint256 usdcAmount = 1000 * 1e6;
         uint256 bidAmount = 1000 * 1e18;
 
         uint256 balanceBefore = usdcMock.balanceOf(owner);
@@ -69,4 +68,3 @@ contract UniswapV4ForkTest is Test {
         assertEq(balanceBefore - balanceAfter, usdcAmount, "Balance should decrease by USDC amount");
     }
 }
-

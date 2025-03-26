@@ -7,3 +7,6 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = git@github.com:foundry-rs/forge-std.git
+[submodule "lib/universal-router"]
+	path = lib/universal-router
+	url = https://github.com/Uniswap/universal-router
