@@ -82,12 +82,18 @@ forge test --fork-url https://bsc-dataseed.binance.org/ -vvvv | grep 0x000000000
     │   │   │   │   │   ├─ [713] 0x0000000000000000000000000000000000003fFF::afterAddLiquidity(0x7A4a5c919aE2541AeD11041A1AEeE68f1287f95b, PoolKey({ currency0: 0x2e234DAe75C793f67A35089C9d99245E1C58470b, currency1: 0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f, fee: 10000 [1e4], tickSpacing: 200, hooks: 0x0000000000000000000000000000000000003fFF }), ModifyLiquidityParams({ tickLower: -887200 [-8.872e5], tickUpper: 887200 [8.872e5], liquidityDelta: 1000000000000000000054 [1e21], salt: 0x0000000000000000000000000000000000000000000000000000000000000880 }), -340282366920938463463034325064847272993536625392568231788544 [-3.402e59], 0, 0x)
 ```
 ### TEST2 (decimals 6 and 18)
-andrey@v510:~/valory/t1/univ4-experiment$ forge test --fork-url https://bsc-dataseed.binance.org/ -vvvv | grep delta
+forge test --fork-url https://bsc-dataseed.binance.org/ -vvvv | grep delta
   delta.amount0 -10000000000000000000
   delta.amount1 9802950
     │   │   │   │   │   │   ├─ [0] console::log("delta.amount0", -10000000000000000000 [-1e19]) [staticcall]
     │   │   │   │   │   │   ├─ [0] console::log("delta.amount1", 9802950 [9.802e6]) [staticcall]
 
+### TEST3 (decimals 18 and 18)
+forge test --fork-url https://bsc-dataseed.binance.org/ -vvvv | grep delta
+  delta.amount0 -10000000000000000000
+  delta.amount1 9802950787206654124
+    │   │   │   │   │   │   ├─ [0] console::log("delta.amount0", -10000000000000000000 [-1e19]) [staticcall]
+    │   │   │   │   │   │   ├─ [0] console::log("delta.amount1", 9802950787206654124 [9.802e18]) [staticcall]
 
 
 ### Optimized version find_salt
