@@ -24,8 +24,8 @@ contract UniswapV4ForkTest is Test {
         string memory BNB_RPC = "https://bsc-dataseed.binance.org/";
         vm.createSelectFork(BNB_RPC);
 
-        usdcMock = new MockERC20("Mock USDT", "mUSDT", 6);
-        usdcMock.mint(owner, 1_000_000 * 10 ** 6);
+        usdcMock = new MockERC20("Mock USDT", "mUSDT", 18);
+        usdcMock.mint(owner, 1_000_000 * 10 ** 18);
 
         bidMock = new MockERC20("Mock BID", "mBID", 18);
         bidMock.mint(owner, 1_000_000 * 10 ** 18);
@@ -46,7 +46,7 @@ contract UniswapV4ForkTest is Test {
     }
 
     function testCreateUniswapPair() public {
-        uint256 usdcAmount = 1000 * 1e6;
+        uint256 usdcAmount = 1000 * 1e18;
         uint256 bidAmount = 1000 * 1e18;
 
         uint256 balanceBefore = usdcMock.balanceOf(owner);

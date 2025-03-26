@@ -4,11 +4,19 @@ pragma solidity ^0.8.26;
 import "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+
+import {CurrencyLibrary, Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+
+import "forge-std/console.sol";
+
 contract RestrictedHook is IHooks {
     bool public pause;
     address public owner;
 
     event BeforeInitialize(address indexed sender, uint256 sqrtPriceX96);
+    event AfterSwap(address tokenOut, uint256 amountOut, uint256 amountFee);
 
     constructor(address _admin) {
         owner = _admin;
@@ -101,6 +109,27 @@ contract RestrictedHook is IHooks {
         BalanceDelta delta,
         bytes calldata hookData
     ) external returns (bytes4, int128) {
+        address tokenOut;
+        uint256 amountOut;
+
+        console.log("delta.amount0", int256(delta.amount0()));
+        console.log("delta.amount1", int256(delta.amount1()));
+
+        if (params.amountSpecified < 0) {
+            // user swaps token0 → receives token1
+            tokenOut = Currency.unwrap(key.currency1);
+            amountOut = uint256(uint128(-delta.amount1()));
+        } else {
+            // user swaps token1 → receives token0
+            tokenOut = Currency.unwrap(key.currency0);
+            amountOut = uint256(uint128(-delta.amount0()));
+        }
+
+        uint256 feeBps = 50;
+        uint256 feeAmount = (amountOut * feeBps) / 10_000;
+
+        emit AfterSwap(tokenOut, amountOut, feeAmount);
+
         return (RestrictedHook.afterSwap.selector, 0);
     }
 

@@ -17,6 +17,8 @@ import {MyV4OnlyUniversalRouter} from "./MyV4OnlyUniversalRouter.sol";
 import {Commands} from "../lib/universal-router/contracts/libraries/Commands.sol";
 import {IV4Router} from "v4-periphery/src/interfaces/IV4Router.sol";
 
+import "forge-std/console.sol";
+
 interface IPermit2 {
     function approve(address token, address spender, uint160 amount, uint48 expiration) external;
 }
@@ -70,8 +72,7 @@ contract UniswapV4LiquidityHelper is Ownable {
             currency0: Currency.wrap(token0),
             currency1: Currency.wrap(token1),
             fee: FEE_TIER,
-            //hooks: IHooks(Hook),
-            hooks: IHooks(address(0)),
+            hooks: IHooks(Hook),
             tickSpacing: 200
         });
 
@@ -116,12 +117,18 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         emit LiquidityAdded(poolIdBytes, liquidity);
 
-
         // swap inside helper
         IERC20(token0).safeTransferFrom(msg.sender, address(this), amount0 / 100); // for swap
         IERC20(token0).approve(address(permit2), amount0 / 100);
         permit2.approve(token0, address(router), uint160(amount0 / 100), uint48(block.timestamp + 1 days));
-        uint256 amoutOut = swapExactInputSingle(key, uint128(amount0 / 100), 50);
+
+        console.log("before createUniswapPair :: amount0", IERC20(token0).balanceOf(address(this)));
+        console.log("before createUniswapPair :: amount1", IERC20(token1).balanceOf(address(this)));
+
+        uint256 amoutOut = swapExactInputSingle(key, uint128(amount0 / 100), 10_000);
+
+        console.log("after createUniswapPair :: amount0", IERC20(token0).balanceOf(address(this)));
+        console.log("after createUniswapPair :: amount1", IERC20(token1).balanceOf(address(this)));
         emit Swap(poolIdBytes, amount0 / 100, amoutOut);
     }
 
