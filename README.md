@@ -96,6 +96,17 @@ forge test --fork-url https://bsc-dataseed.binance.org/ -vvvv | grep delta
     │   │   │   │   │   │   ├─ [0] console::log("delta.amount1", 9802950787206654124 [9.802e18]) [staticcall]
 
 
+### TEST (correct estimate swap amountOut)
+forge test --fork-url https://bsc-dataseed.binance.org/ -vvvv | grep delta
+  afterSwap :: delta.amount0 -10000000000000000000
+  afterSwap :: delta.amount1 9802950787206654124
+    │   │   │   │   │   │   ├─ [0] console::log("afterSwap :: delta.amount0", -10000000000000000000 [-1e19]) [staticcall]
+    │   │   │   │   │   │   ├─ [0] console::log("afterSwap :: delta.amount1", 9802950787206654124 [9.802e18]) [staticcall]
+forge test --fork-url https://bsc-dataseed.binance.org/ -vvvv | grep estimatedOut
+  estimatedOut (without slippage) 9802950787206654124
+    │   ├─ [0] console::log("estimatedOut (without slippage)", 9802950787206654124 [9.802e18]) [staticcall]
+
+
 ### Optimized version find_salt
 ```
 sudo apt update

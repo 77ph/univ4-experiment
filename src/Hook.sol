@@ -112,8 +112,8 @@ contract RestrictedHook is IHooks {
         address tokenOut;
         uint256 amountOut;
 
-        console.log("delta.amount0", int256(delta.amount0()));
-        console.log("delta.amount1", int256(delta.amount1()));
+        console.log("afterSwap :: delta.amount0", int256(delta.amount0()));
+        console.log("afterSwap :: delta.amount1", int256(delta.amount1()));
 
         if (params.zeroForOne) {
             tokenOut = Currency.unwrap(key.currency1);

@@ -17,7 +17,8 @@ import {MyV4OnlyUniversalRouter} from "./MyV4OnlyUniversalRouter.sol";
 import {Commands} from "../lib/universal-router/contracts/libraries/Commands.sol";
 import {IV4Router} from "v4-periphery/src/interfaces/IV4Router.sol";
 
-import {FullMath} from "./FullMath.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {SwapMath} from "@uniswap/v4-core/src/libraries/SwapMath.sol";
 
 import "forge-std/console.sol";
 
@@ -128,20 +129,23 @@ contract UniswapV4LiquidityHelper is Ownable {
         console.log("before createUniswapPair :: amount0", IERC20(token0).balanceOf(address(this)));
         console.log("before createUniswapPair :: amount1", IERC20(token1).balanceOf(address(this)));
 
-        uint256 amoutOut = swapExactInputSingle(key, uint128(amount0 / 100), 200, FEE_TIER);
+        uint256 amoutOut = swapExactInputSingle(key, uint128(amount0 / 100), 200, FEE_TIER, uint128(liquidity));
 
         console.log("after createUniswapPair :: amount0", IERC20(token0).balanceOf(address(this)));
         console.log("after createUniswapPair :: amount1", IERC20(token1).balanceOf(address(this)));
         emit Swap(poolIdBytes, amount0 / 100, amoutOut);
     }
 
-    function swapExactInputSingle(PoolKey memory key, uint128 amountIn, uint256 slippage, uint24 fee_tier)
-        public
-        returns (uint256 amountOut)
-    {
+    function swapExactInputSingle(
+        PoolKey memory key,
+        uint128 amountIn,
+        uint256 slippage,
+        uint24 fee_tier,
+        uint128 liquidity
+    ) public returns (uint256 amountOut) {
         PoolId poolId = PoolIdLibrary.toId(key);
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(poolManager, poolId);
-        uint128 minOut = getMinAmountOut(amountIn, sqrtPriceX96, slippage, fee_tier); // slippage=50 -> 0.5% slippage
+        uint128 minOut = getMinAmountOut(amountIn, sqrtPriceX96, liquidity, true, fee_tier, 0); // slippage = 0
 
         // Encode the Universal Router command
         bytes memory commands = abi.encodePacked(uint8(V4_SWAP));
@@ -209,22 +213,21 @@ contract UniswapV4LiquidityHelper is Ownable {
     function getMinAmountOut(
         uint256 amountIn,
         uint160 sqrtPriceX96,
-        uint256 slippageBps, // например, 50 = 0.5%
-        uint24 feeBps
-    ) public pure returns (uint128 minAmountOut) {
-        uint256 priceX96 = uint256(sqrtPriceX96) * uint256(sqrtPriceX96) >> 96;
+        uint128 liquidity,
+        bool zeroForOne,
+        uint24 fee,
+        uint24 slippageBps
+    ) public pure returns (uint128 amountOut) {
+        int256 amountRemaining = zeroForOne ? -int256(amountIn) : int256(amountIn);
 
-        // 1% fee taken from input, not output!
-        uint256 amountAfterFee = FullMath.mulDiv(amountIn, feeDenominator - feeBps, feeDenominator);
+        uint160 sqrtPriceTargetX96 = zeroForOne ? MIN_SQRT_RATIO : MAX_SQRT_RATIO;
 
-        // estimated output after fee
-        uint256 estimatedOut = FullMath.mulDiv(amountAfterFee, priceX96, 1 << 96);
+        (,, uint256 amountOutResult,) =
+            SwapMath.computeSwapStep(sqrtPriceX96, sqrtPriceTargetX96, liquidity, amountRemaining, fee);
 
-        console.log("estimatedOut after input fee", estimatedOut);
+        console.log("estimatedOut (without slippage)", amountOutResult);
 
-        // Учёт проскальзывания
-        uint256 slippage = (estimatedOut * slippageBps) / 10_000;
-
-        minAmountOut = uint128(estimatedOut - slippage);
+        uint256 slippage = (amountOutResult * slippageBps) / 10_000;
+        amountOut = uint128(amountOutResult - slippage);
     }
 }
