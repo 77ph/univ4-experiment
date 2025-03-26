@@ -17,6 +17,8 @@ import {MyV4OnlyUniversalRouter} from "./MyV4OnlyUniversalRouter.sol";
 import {Commands} from "../lib/universal-router/contracts/libraries/Commands.sol";
 import {IV4Router} from "v4-periphery/src/interfaces/IV4Router.sol";
 
+import {FullMath} from "./FullMath.sol";
+
 import "forge-std/console.sol";
 
 interface IPermit2 {
@@ -184,13 +186,13 @@ contract UniswapV4LiquidityHelper is Ownable {
         emit Withdrawal(_token, _amount);
     }
 
-    function _calculatePrice(uint256 _amount0, uint256 _amount1) private pure returns (uint160 sqrtPriceX96) {
-        require(_amount0 > 0 && _amount1 > 0, "Amounts must be > 0");
+    function _calculatePrice(uint256 amount0, uint256 amount1) private pure returns (uint160 sqrtPriceX96) {
+        require(amount0 > 0 && amount1 > 0, "Amounts must be > 0");
 
-        // price = amount1 / amount0 in Q96
-        uint256 ratioX96 = (_amount1 << 96) / _amount0;
+        // ratioX192 = amount1 / amount0, масштабированный в Q192
+        uint256 ratioX192 = FullMath.mulDiv(amount1, 1 << 192, amount0);
 
-        sqrtPriceX96 = uint160(_sqrt(ratioX96) << 48); // √(Q96) => Q96 = √ratio << 48
+        sqrtPriceX96 = uint160(_sqrt(ratioX192));
     }
 
     function _sqrt(uint256 x) private pure returns (uint256 result) {
