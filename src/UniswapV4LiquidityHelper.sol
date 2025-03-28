@@ -180,7 +180,16 @@ contract UniswapV4LiquidityHelper is Ownable {
 
             bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
             bytes[] memory params = new bytes[](2);
-            params[0] = abi.encode(key, MIN_TICK, MAX_TICK, 1e9, minAmount0, minAmount1, msg.sender, "");
+
+            uint128 liquidityInit = LiquidityAmounts.getLiquidityForAmounts(
+                _calculatePrice(1, 1),
+                TickMath.getSqrtPriceAtTick(MIN_TICK),
+                TickMath.getSqrtPriceAtTick(MAX_TICK),
+                minAmount0,
+                minAmount1
+            );
+
+            params[0] = abi.encode(key, MIN_TICK, MAX_TICK, liquidityInit, minAmount0, minAmount1, msg.sender, "");
             params[1] = abi.encode(Currency.wrap(token0), Currency.wrap(token1));
             positionManager.modifyLiquidities(abi.encode(actions, params), block.timestamp + 600);
         }
