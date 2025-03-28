@@ -187,9 +187,15 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         // Determine tick range above current price for one-sided token1
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(poolManager, poolId);
+        /*
         int24 tickCurrent = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
         int24 tickLower = tickCurrent + 200; // one tickSpacing up
         int24 tickUpper = tickCurrent + 600; // few tickSpacings up
+        */
+        int24 tickCurrent = 0; // мы инициализируем sqrtPriceX96 = 2**96 → соответствует tick = 0
+        int24 tickSpacing = key.tickSpacing;
+        int24 tickLower = tickCurrent + tickSpacing * 10;
+        int24 tickUpper = tickLower + tickSpacing * 10;
 
         // Calculate liquidity from amount1 (token1 only)
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmount1(
