@@ -161,7 +161,7 @@ contract UniswapV4LiquidityHelper is Ownable {
         });
 
         // Set initial sqrt price assuming 1:1
-        uint160 initialSqrtPriceX96 = _calculatePrice(1e18, 1e18);
+        uint160 initialSqrtPriceX96 = _calculatePrice(1, 1);
         poolManager.initialize(key, initialSqrtPriceX96);
 
         PoolId poolId = PoolIdLibrary.toId(key);
@@ -182,7 +182,7 @@ contract UniswapV4LiquidityHelper is Ownable {
             bytes[] memory params = new bytes[](2);
 
             uint128 liquidityInit = LiquidityAmounts.getLiquidityForAmounts(
-                _calculatePrice(1, 1),
+                initialSqrtPriceX96,
                 TickMath.getSqrtPriceAtTick(MIN_TICK),
                 TickMath.getSqrtPriceAtTick(MAX_TICK),
                 minAmount0,
