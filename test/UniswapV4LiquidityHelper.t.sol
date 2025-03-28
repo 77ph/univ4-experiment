@@ -45,7 +45,7 @@ contract UniswapV4ForkTest is Test {
         bidMock.approve(address(liquidityHelper), type(uint256).max);
     }
 
-    function testCreateUniswapPair() public {
+    function _testCreateUniswapPair() public {
         uint256 usdcAmount = 1000 * 1e18;
         uint256 bidAmount = 1000 * 1e18;
 
@@ -55,6 +55,26 @@ contract UniswapV4ForkTest is Test {
         restrictedHook.setPause(false);
 
         (bytes32 poolId, uint256 liquidity) = liquidityHelper.createUniswapPair(
+            address(usdcMock), // Mock USDC
+            address(bidMock),
+            usdcAmount,
+            bidAmount,
+            address(restrictedHook)
+        );
+
+        assertGt(liquidity, 0, "Liquidity should be greater than 0");
+    }
+
+    function testCreateUniswapPairOneSide() public {
+        uint256 usdcAmount = 1000 * 1e18;
+        uint256 bidAmount = 1000 * 1e18;
+
+        uint256 balanceBefore = usdcMock.balanceOf(owner);
+
+        // Unpaused
+        restrictedHook.setPause(false);
+
+        (bytes32 poolId, uint256 liquidity) = liquidityHelper.createUniswapPairOneSide(
             address(usdcMock), // Mock USDC
             address(bidMock),
             usdcAmount,

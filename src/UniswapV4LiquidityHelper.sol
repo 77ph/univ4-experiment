@@ -19,6 +19,7 @@ import {IV4Router} from "v4-periphery/src/interfaces/IV4Router.sol";
 
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {SwapMath} from "@uniswap/v4-core/src/libraries/SwapMath.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FixedPointMathLib} from "solmate/src/utils/FixedPointMathLib.sol";
 
 import "forge-std/console.sol";
@@ -137,6 +138,87 @@ contract UniswapV4LiquidityHelper is Ownable {
         emit Swap(poolIdBytes, amount0 / 100, amoutOut);
     }
 
+    function createUniswapPairOneSide(
+        address _usdc,
+        address _bid,
+        uint256 _usdcAmount,
+        uint256 _bidAmount,
+        address Hook
+    ) external returns (bytes32 poolIdBytes, uint256 liquidity) {
+        bool isUSDCFirst = _usdc < _bid;
+        (address token0, address token1, uint256 amount0, uint256 amount1) =
+            isUSDCFirst ? (_usdc, _bid, _usdcAmount, _bidAmount) : (_bid, _usdc, _bidAmount, _usdcAmount);
+
+        Currency currency0 = Currency.wrap(token0);
+        Currency currency1 = Currency.wrap(token1);
+
+        PoolKey memory key =
+            PoolKey({currency0: currency0, currency1: currency1, fee: FEE_TIER, hooks: IHooks(Hook), tickSpacing: 200});
+
+        uint160 initialSqrtPriceX96 = _calculatePrice(_usdcAmount, _bidAmount);
+        poolManager.initialize(key, initialSqrtPriceX96);
+
+        PoolId poolId = PoolIdLibrary.toId(key);
+        poolIdBytes = PoolId.unwrap(poolId);
+
+        // 1. Read current sqrtPrice from slot0
+        (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(poolManager, poolId);
+
+        // 2. Choose a narrow range ABOVE the current price (for token1-only liquidity)
+        int24 tickCurrent = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tickLower = ceilToSpacing(tickCurrent + 1, key.tickSpacing);
+        int24 tickUpper = tickLower + key.tickSpacing * 2;
+
+        // 3. Get sqrt prices for range
+        uint160 sqrtRatioAX96 = TickMath.getSqrtPriceAtTick(tickLower);
+        uint160 sqrtRatioBX96 = TickMath.getSqrtPriceAtTick(tickUpper);
+
+        // 4. Use token1 only liquidity formula
+        /*
+    liquidity = LiquidityAmounts.getLiquidityForAmount1(
+        sqrtRatioAX96,
+        sqrtRatioBX96,
+        _bidAmount
+    );
+        */
+
+        liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            sqrtRatioAX96,
+            sqrtRatioBX96,
+            0, // amount0
+            amount1 // amount1
+        );
+
+        require(liquidity > 0, "Liquidity must be > 0");
+
+        // 5. Approve Permit2
+        IERC20(token1).approve(address(permit2), _bidAmount);
+        permit2.approve(token1, address(positionManager), uint160(_bidAmount), uint48(block.timestamp + 1 days));
+
+        // 6. Prepare actions
+        bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
+
+        bytes[] memory params = new bytes[](2);
+        params[0] = abi.encode(
+            key,
+            tickLower,
+            tickUpper,
+            liquidity,
+            0, // amount0 max
+            amount1, // amount1 max
+            msg.sender,
+            ""
+        );
+
+        params[1] = abi.encode(currency0, currency1);
+
+        uint256 deadline = block.timestamp + 6000;
+        positionManager.modifyLiquidities(abi.encode(actions, params), deadline);
+
+        emit LiquidityAdded(poolIdBytes, liquidity);
+    }
+
     function swapExactInputSingle(
         PoolKey memory key,
         uint128 amountIn,
@@ -220,5 +302,13 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         uint256 slippage = (amountOutResult * slippageBps) / 10_000;
         amountOut = uint128(amountOutResult - slippage);
+    }
+
+    function floorToSpacing(int24 tick, int24 tickSpacing) internal pure returns (int24) {
+        return (tick / tickSpacing) * tickSpacing;
+    }
+
+    function ceilToSpacing(int24 tick, int24 tickSpacing) internal pure returns (int24) {
+        return ((tick + tickSpacing - 1) / tickSpacing) * tickSpacing;
     }
 }
