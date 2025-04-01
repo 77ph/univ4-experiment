@@ -238,11 +238,12 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         // Initialize pool if needed with midpoint sqrtPriceX96
         int24 tickSpacing = key.tickSpacing;
-        int24 midTick = 0;
-        int24 tickLower = -tickSpacing * 5;
-        int24 tickUpper = tickSpacing * 5;
+        //int24 tickLower = -tickSpacing * 5;
+        //int24 tickUpper = tickSpacing * 5;
+        int24 tickLower = tickSpacing;
+        int24 tickUpper = tickLower + tickSpacing;
 
-        midTick = (tickLower + tickUpper) / 2;
+        // midTick = (tickLower + tickUpper) / 2;
         //uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(midTick);
         uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(0);
 
@@ -264,7 +265,6 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         uint160 sqrtPriceAX96 = TickMath.getSqrtPriceAtTick(tickLower);
         uint160 sqrtPriceBX96 = TickMath.getSqrtPriceAtTick(tickUpper);
-        //sqrtPriceX96 = TickMath.getSqrtPriceAtTick(midTick);
 
         console.log("sqrtPriceA:", sqrtPriceAX96);
         console.log("sqrtPriceX96 (mid):", sqrtPriceX96);
