@@ -156,9 +156,10 @@ contract UniswapV4LiquidityHelper is Ownable {
             currency0: Currency.wrap(token0),
             currency1: Currency.wrap(token1),
             fee: FEE_TIER,
-            hooks: IHooks(Hook),
+            hooks: IHooks(address(0)),
             tickSpacing: 200
         });
+        // hooks: IHooks(Hook),
 
         // Set initial sqrt price assuming 1:1
         uint160 sqrtPriceX96 = _calculatePrice(1, 1);
@@ -208,6 +209,7 @@ contract UniswapV4LiquidityHelper is Ownable {
         console.log("token1 balance:", IERC20(token1).balanceOf(address(this)));
 
         // Calculate liquidity for provided token amounts
+        /*
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
             TickMath.getSqrtPriceAtTick(tickLower),
@@ -215,6 +217,14 @@ contract UniswapV4LiquidityHelper is Ownable {
             0,
             amount1
         );
+        */
+        sqrtPriceX96 = TickMath.getSqrtPriceAtTick(1000); // ниже диапазона
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount1(
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            amount1
+        );
+        console.log("Calculated liquidity:", liquidity);
 
         // Encode actions for actual one-sided mint
         {
