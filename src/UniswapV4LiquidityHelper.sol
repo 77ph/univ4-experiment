@@ -52,6 +52,7 @@ contract UniswapV4LiquidityHelper is Ownable {
 
     event PoolCreated(bytes32 poolId);
     event LiquidityAdded(bytes32 poolId, uint128 liquidity);
+    event LiquidityAddedOneSide(bytes32 poolId, uint128 liquidity);
     event Withdrawal(IERC20 indexed token, uint256 amount);
     event Swap(bytes32 poolId, uint256 amountIn, uint256 amountOut);
 
@@ -238,8 +239,6 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         // Initialize pool if needed with midpoint sqrtPriceX96
         int24 tickSpacing = key.tickSpacing;
-        //int24 tickLower = -tickSpacing * 5;
-        //int24 tickUpper = tickSpacing * 5;
         int24 tickLower = tickSpacing;
         int24 tickUpper = tickLower + tickSpacing;
 
@@ -267,7 +266,7 @@ contract UniswapV4LiquidityHelper is Ownable {
         uint160 sqrtPriceBX96 = TickMath.getSqrtPriceAtTick(tickUpper);
 
         console.log("sqrtPriceA:", sqrtPriceAX96);
-        console.log("sqrtPriceX96 (mid):", sqrtPriceX96);
+        console.log("sqrtPriceX96 < sqrtPriceA and sqrtPriceA < sqrtPriceB:", sqrtPriceX96);
         console.log("sqrtPriceB:", sqrtPriceBX96);
 
         liquidity = LiquidityAmounts.getLiquidityForAmount0(sqrtPriceAX96, sqrtPriceBX96, amount0);
@@ -287,6 +286,7 @@ contract UniswapV4LiquidityHelper is Ownable {
 
         console.log("token0 balance after:", IERC20(token0).balanceOf(address(this)));
         console.log("token1 balance after:", IERC20(token1).balanceOf(address(this)));
+        emit LiquidityAddedOneSide(poolIdBytes, liquidity);
     }
 
     function swapExactInputSingle(
