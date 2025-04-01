@@ -145,6 +145,75 @@ contract UniswapV4LiquidityHelper is Ownable {
         uint256 _bidAmount,
         address Hook
     ) external returns (bytes32 poolIdBytes, uint128 liquidity) {
+        // 1. Transfer tokens from msg.sender
+        bool isUSDCFirst = _usdc < _bid;
+        (address token0, address token1, uint256 amount0, uint256 amount1) =
+            isUSDCFirst ? (_usdc, _bid, _usdcAmount, _bidAmount) : (_bid, _usdc, _bidAmount, _usdcAmount);
+
+        IERC20(token0).transferFrom(msg.sender, address(this), 1); // minimal amount
+        IERC20(token1).transferFrom(msg.sender, address(this), amount1);
+
+        // 2. Prepare PoolKey
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: 1e4,
+            tickSpacing: 200,
+            hooks: IHooks(Hook)
+        });
+
+        PoolId poolId = PoolIdLibrary.toId(key);
+        poolIdBytes = PoolId.unwrap(poolId);
+
+        // 3. Initialize pool with sqrtPriceX96 slightly outside tick range
+        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(1000);
+        poolManager.initialize(key, sqrtPriceX96);
+
+        // 4. Approvals for Permit2 and PositionManager
+        uint256 minAmount0 = 1;
+        IERC20(token0).approve(address(permit2), minAmount0);
+        IERC20(token1).approve(address(permit2), amount1);
+
+        permit2.approve(token0, address(positionManager), uint160(minAmount0), uint48(block.timestamp + 1 days));
+        permit2.approve(token1, address(positionManager), uint160(amount1), uint48(block.timestamp + 1 days));
+
+        // 5. Choose tick range (static for now)
+        int24 tickLower = 2000;
+        int24 tickUpper = 4000;
+
+        // 6. Calculate liquidity for amount1
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount1(
+            TickMath.getSqrtPriceAtTick(tickLower), TickMath.getSqrtPriceAtTick(tickUpper), amount1
+        );
+
+        // 7. Prepare modifyLiquidities call
+        bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
+        bytes[] memory params = new bytes[](2);
+
+        params[0] = abi.encode(
+            key,
+            tickLower,
+            tickUpper,
+            liquidity,
+            1, // amount0Desired = 1 (minimal)
+            amount1, // actual provided
+            msg.sender,
+            ""
+        );
+
+        params[1] = abi.encode(Currency.wrap(token0), Currency.wrap(token1));
+
+        // 8. Mint liquidity
+        positionManager.modifyLiquidities(abi.encode(actions, params), block.timestamp + 600);
+    }
+
+    function createUniswapPairOneSideOLD(
+        address _usdc,
+        address _bid,
+        uint256 _usdcAmount,
+        uint256 _bidAmount,
+        address Hook
+    ) external returns (bytes32 poolIdBytes, uint128 liquidity) {
         IERC20(_usdc).safeTransferFrom(msg.sender, address(this), 3 * _usdcAmount); // for addLiqidity
         IERC20(_bid).safeTransferFrom(msg.sender, address(this), 3 * _bidAmount); // for addLiqidity
 
@@ -208,21 +277,9 @@ contract UniswapV4LiquidityHelper is Ownable {
         console.log("token0 balance:", IERC20(token0).balanceOf(address(this)));
         console.log("token1 balance:", IERC20(token1).balanceOf(address(this)));
 
-        // Calculate liquidity for provided token amounts
-        /*
-        liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
-            0,
-            amount1
-        );
-        */
         sqrtPriceX96 = TickMath.getSqrtPriceAtTick(1000); // ниже диапазона
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount1(
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
-            amount1
+        liquidity = LiquidityAmounts.getLiquidityForAmount1(
+            TickMath.getSqrtPriceAtTick(tickLower), TickMath.getSqrtPriceAtTick(tickUpper), amount1
         );
         console.log("Calculated liquidity:", liquidity);
 
@@ -241,34 +298,6 @@ contract UniswapV4LiquidityHelper is Ownable {
         console.log("token0 balance after:", IERC20(token0).balanceOf(address(this)));
         console.log("token1 balance after:", IERC20(token1).balanceOf(address(this)));
 
-        /*
-        // Determine tick range above current price for one-sided token1
-        (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(poolManager, poolId);
-
-        int24 tickCurrent = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
-        int24 tickLower = tickCurrent + 200; // one tickSpacing up
-        int24 tickUpper = tickCurrent + 600; // few tickSpacings up
-        
-        int24 tickCurrent = 0; // мы инициализируем sqrtPriceX96 = 2**96 → соответствует tick = 0
-        int24 tickSpacing = key.tickSpacing;
-        int24 tickLower = tickCurrent + tickSpacing * 10;
-        int24 tickUpper = tickLower + tickSpacing * 10;
-
-        // Calculate liquidity from amount1 (token1 only)
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount1(
-            TickMath.getSqrtPriceAtTick(tickLower), TickMath.getSqrtPriceAtTick(tickUpper), amount1
-        );
-        require(liquidity > 0, "Liquidity must be > 0");
-
-        // Add token1-only liquidity
-        {
-            bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
-            bytes[] memory params = new bytes[](2);
-            params[0] = abi.encode(key, tickLower, tickUpper, liquidity, 0, amount1, msg.sender, "");
-            params[1] = abi.encode(Currency.wrap(token0), Currency.wrap(token1));
-            positionManager.modifyLiquidities(abi.encode(actions, params), block.timestamp + 600);
-        }
-        */
         emit LiquidityAdded(poolIdBytes, liquidity);
     }
 
