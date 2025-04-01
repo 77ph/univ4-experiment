@@ -212,7 +212,7 @@ contract UniswapV4LiquidityHelper is Ownable {
             sqrtPriceX96,
             TickMath.getSqrtPriceAtTick(tickLower),
             TickMath.getSqrtPriceAtTick(tickUpper),
-            amount0,
+            0,
             amount1
         );
 
@@ -221,12 +221,15 @@ contract UniswapV4LiquidityHelper is Ownable {
             bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
             bytes[] memory params = new bytes[](2);
 
-            params[0] = abi.encode(key, tickLower, tickUpper, liquidity, amount0, amount1, msg.sender, "");
+            params[0] = abi.encode(key, tickLower, tickUpper, liquidity, 0, amount1, msg.sender, "");
 
             params[1] = abi.encode(Currency.wrap(token0), Currency.wrap(token1));
 
             positionManager.modifyLiquidities(abi.encode(actions, params), block.timestamp + 600);
         }
+
+        console.log("token0 balance after:", IERC20(token0).balanceOf(address(this)));
+        console.log("token1 balance after:", IERC20(token1).balanceOf(address(this)));
 
         /*
         // Determine tick range above current price for one-sided token1
