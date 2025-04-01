@@ -51,7 +51,7 @@ contract UniswapV4LiquidityHelper is Ownable {
     bytes1 constant V4_SWAP = 0x10;
 
     event PoolCreated(bytes32 poolId);
-    event LiquidityAdded(bytes32 poolId, uint256 liquidity);
+    event LiquidityAdded(bytes32 poolId, uint128 liquidity);
     event Withdrawal(IERC20 indexed token, uint256 amount);
     event Swap(bytes32 poolId, uint256 amountIn, uint256 amountOut);
 
@@ -65,7 +65,7 @@ contract UniswapV4LiquidityHelper is Ownable {
     function createUniswapPair(address _usdc, address _bid, uint256 _usdcAmount, uint256 _bidAmount, address Hook)
         external
         onlyOwner
-        returns (bytes32 poolIdBytes, uint256 liquidity)
+        returns (bytes32 poolIdBytes, uint128 liquidity)
     {
         IERC20(_usdc).safeTransferFrom(msg.sender, address(this), _usdcAmount); // for addLiqidity
         IERC20(_bid).safeTransferFrom(msg.sender, address(this), _bidAmount); // for addLiqidity
@@ -144,9 +144,9 @@ contract UniswapV4LiquidityHelper is Ownable {
         uint256 _usdcAmount,
         uint256 _bidAmount,
         address Hook
-    ) external returns (bytes32 poolIdBytes, uint256 liquidityAdded) {
-        IERC20(_usdc).safeTransferFrom(msg.sender, address(this), 2 * _usdcAmount); // for addLiqidity
-        IERC20(_bid).safeTransferFrom(msg.sender, address(this), 2 * _bidAmount); // for addLiqidity
+    ) external returns (bytes32 poolIdBytes, uint128 liquidity) {
+        IERC20(_usdc).safeTransferFrom(msg.sender, address(this), 3 * _usdcAmount); // for addLiqidity
+        IERC20(_bid).safeTransferFrom(msg.sender, address(this), 3 * _bidAmount); // for addLiqidity
 
         bool isUSDCFirst = _usdc < _bid;
         (address token0, address token1, uint256 amount0, uint256 amount1) =
@@ -161,8 +161,8 @@ contract UniswapV4LiquidityHelper is Ownable {
         });
 
         // Set initial sqrt price assuming 1:1
-        uint160 initialSqrtPriceX96 = _calculatePrice(1, 1);
-        poolManager.initialize(key, initialSqrtPriceX96);
+        uint160 sqrtPriceX96 = _calculatePrice(1, 1);
+        poolManager.initialize(key, sqrtPriceX96);
 
         PoolId poolId = PoolIdLibrary.toId(key);
         poolIdBytes = PoolId.unwrap(poolId);
@@ -182,7 +182,7 @@ contract UniswapV4LiquidityHelper is Ownable {
             bytes[] memory params = new bytes[](2);
 
             uint128 liquidityInit = LiquidityAmounts.getLiquidityForAmounts(
-                initialSqrtPriceX96,
+                sqrtPriceX96,
                 TickMath.getSqrtPriceAtTick(MIN_TICK),
                 TickMath.getSqrtPriceAtTick(MAX_TICK),
                 minAmount0,
@@ -194,13 +194,48 @@ contract UniswapV4LiquidityHelper is Ownable {
             positionManager.modifyLiquidities(abi.encode(actions, params), block.timestamp + 600);
         }
 
+        // Approve Permit2 and PositionManager
+        IERC20(token0).approve(address(permit2), amount0);
+        IERC20(token1).approve(address(permit2), amount1);
+        permit2.approve(token0, address(positionManager), uint160(amount0), uint48(block.timestamp + 1 days));
+        permit2.approve(token1, address(positionManager), uint160(amount1), uint48(block.timestamp + 1 days));
+
+        int24 tickSpacing = key.tickSpacing;
+        int24 tickLower = 2000; // You may compute dynamically based on sqrtPriceX96
+        int24 tickUpper = 4000;
+
+        console.log("token0 balance:", IERC20(token0).balanceOf(address(this)));
+        console.log("token1 balance:", IERC20(token1).balanceOf(address(this)));
+
+        // Calculate liquidity for provided token amounts
+        liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            amount0,
+            amount1
+        );
+
+        // Encode actions for actual one-sided mint
+        {
+            bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
+            bytes[] memory params = new bytes[](2);
+
+            params[0] = abi.encode(key, tickLower, tickUpper, liquidity, amount0, amount1, msg.sender, "");
+
+            params[1] = abi.encode(Currency.wrap(token0), Currency.wrap(token1));
+
+            positionManager.modifyLiquidities(abi.encode(actions, params), block.timestamp + 600);
+        }
+
+        /*
         // Determine tick range above current price for one-sided token1
         (uint160 sqrtPriceX96,,,) = StateLibrary.getSlot0(poolManager, poolId);
-        /*
+
         int24 tickCurrent = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
         int24 tickLower = tickCurrent + 200; // one tickSpacing up
         int24 tickUpper = tickCurrent + 600; // few tickSpacings up
-        */
+        
         int24 tickCurrent = 0; // мы инициализируем sqrtPriceX96 = 2**96 → соответствует tick = 0
         int24 tickSpacing = key.tickSpacing;
         int24 tickLower = tickCurrent + tickSpacing * 10;
@@ -220,9 +255,8 @@ contract UniswapV4LiquidityHelper is Ownable {
             params[1] = abi.encode(Currency.wrap(token0), Currency.wrap(token1));
             positionManager.modifyLiquidities(abi.encode(actions, params), block.timestamp + 600);
         }
-
+        */
         emit LiquidityAdded(poolIdBytes, liquidity);
-        return (poolIdBytes, liquidity);
     }
 
     function swapExactInputSingle(
