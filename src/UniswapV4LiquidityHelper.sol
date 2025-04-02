@@ -381,4 +381,25 @@ contract UniswapV4LiquidityHelper is Ownable {
     function ceilToSpacing(int24 tick, int24 tickSpacing) internal pure returns (int24) {
         return ((tick + tickSpacing - 1) / tickSpacing) * tickSpacing;
     }
+
+    function getTicksForOneSidedLiquidity(
+        uint160 sqrtPriceX96,
+        int24 tickSpacing,
+        bool addToken0 // true = one-sided token0, false = token1
+    ) public pure returns (int24 tickLower, int24 tickUpper) {
+        int24 currentTick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        // округляем вниз до ближайшего кратного tickSpacing
+        int24 baseTick = (currentTick / tickSpacing) * tickSpacing;
+
+        if (addToken0) {
+            // для токена0: цена должна быть ниже диапазона
+            tickLower = baseTick + tickSpacing; // shift range right
+            tickUpper = tickLower + tickSpacing;
+        } else {
+            // для токена1: цена должна быть выше диапазона
+            tickUpper = baseTick; // shift range left
+            tickLower = tickUpper - tickSpacing;
+        }
+    }
 }
