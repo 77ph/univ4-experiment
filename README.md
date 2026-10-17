@@ -121,9 +121,9 @@ be higher than sqrtPriceAtTick(tickUpper) → then it will be a 1-only token
 
 fall inside the range → then both tokens will be required
 
-andrey@v510:~/valory/t1/univ4-experiment$ forge test --fork-url https://bsc-dataseed.binance.org/ -vvvv | grep LiquidityAddedOneSide
+andrey@v510:~/univ4-experiment$ forge test --fork-url https://bsc-dataseed.binance.org/ -vvvv | grep LiquidityAddedOneSide
     │   ├─ emit LiquidityAddedOneSide(poolId: 0xd41d79d94c12e7d5638388ff203ea0f9c4b1f8654fb6703cab294f75d29204ae, liquidity: 101515882869044476600630 [1.015e23])
-andrey@v510:~/valory/t1/univ4-experiment$ 
+andrey@v510:~/univ4-experiment$ 
 ```
 
 ### Optimized version find_salt
